@@ -33,6 +33,7 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 100;
         }
 
         .header h1 {
@@ -71,72 +72,120 @@
             flex: 1;
             overflow: hidden;
             position: relative;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #f8f9fa;
+            cursor: grab;
         }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
+        #canvas-container:active {
+            cursor: grabbing;
         }
 
-        #nodes-container {
+        /* Dot pattern background */
+        #canvas-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: radial-gradient(circle, #ccc 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        #tree-viewport {
+            position: absolute;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        .couple-container {
+            position: absolute;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .person-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            text-align: center;
+            width: 150px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+        }
+
+        .person-card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            transform: translateY(-3px);
+        }
+
+        .person-card.male {
+            border-top: 4px solid #2196F3;
+        }
+
+        .person-card.female {
+            border-top: 4px solid #E91E63;
+        }
+
+        .person-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #667eea;
+            margin-bottom: 10px;
+        }
+
+        .person-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+
+        .person-dates {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .person-dates .alive {
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .person-dates .deceased {
+            color: #999;
+        }
+
+        /* SVG für Linien */
+        #lines-svg {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
+            overflow: visible;
         }
 
-        .node-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            padding: 12px;
-            text-align: center;
-            width: 160px;
-            position: absolute;
-            cursor: pointer;
-            transition: all 0.3s;
-            user-select: none;
-            pointer-events: all;
+        .marriage-line {
+            stroke: #E91E63;
+            stroke-width: 3;
+            fill: none;
         }
 
-        .node-card:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            transform: scale(1.05);
-        }
-
-        .node-image {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #667eea;
-            margin-bottom: 8px;
-        }
-
-        .node-name {
-            font-weight: bold;
-            font-size: 13px;
-            margin-bottom: 4px;
-            color: #333;
-        }
-
-        .node-dates {
-            font-size: 11px;
-            color: #666;
-            line-height: 1.3;
-        }
-
-        .node-dates .alive {
-            color: #4CAF50;
-            font-weight: bold;
-        }
-
-        .node-dates .deceased {
-            color: #999;
+        .child-line {
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
         }
 
         .zoom-controls {
@@ -154,11 +203,14 @@
             height: 40px;
             background: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .zoom-btn:hover {
@@ -170,280 +222,661 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
             font-size: 12px;
             z-index: 10;
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 13px;
         }
 
         .legend-item {
             margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
-        .legend-color {
-            width: 20px;
+        .legend-line {
+            width: 30px;
             height: 3px;
+        }
+
+        .legend-line.marriage {
+            background: #E91E63;
+        }
+
+        .legend-line.child {
             background: #667eea;
         }
 
-        .legend-color.living {
-            background: #4CAF50;
-            height: 15px;
-            border-radius: 50%;
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+
+        .empty-state h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .empty-state a {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        .empty-state a:hover {
+            background: #764ba2;
+        }
+
+        .zoom-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #666;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Familien Stammbaum</h1>
+            <h1>🌳 Familien Stammbaum</h1>
             <div class="header-buttons">
-                <button class="btn" onclick="resetZoom()">Zurücksetzen</button>
-                <a href="/edit" class="btn btn-edit" style="text-decoration: none; cursor: pointer;">Bearbeiten</a>
+                <button class="btn" onclick="fitToScreen()">Anpassen</button>
+                <button class="btn" onclick="resetView()">Zurücksetzen</button>
+                <a href="/edit" class="btn btn-edit" style="text-decoration: none;">✏️ Bearbeiten</a>
             </div>
         </div>
         <div id="canvas-container">
-            <canvas id="tree-canvas"></canvas>
-            <div id="nodes-container"></div>
+            <div id="tree-viewport">
+                <svg id="lines-svg"></svg>
+            </div>
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="zoomIn()" title="Vergrößern">+</button>
                 <button class="zoom-btn" onclick="zoomOut()" title="Verkleinern">−</button>
             </div>
             <div class="legend">
+                <h4>Legende</h4>
                 <div class="legend-item">
-                    <div class="legend-color"></div>
-                    <span>Eltern-Kind Beziehung</span>
+                    <div class="legend-line marriage"></div>
+                    <span>Ehe / Partnerschaft</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: #e91e63; height: 3px; border-radius: 0;"></div>
-                    <span>Ehegatte (verheiratet)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color living"></div>
-                    <span>Lebend</span>
+                    <div class="legend-line child"></div>
+                    <span>Eltern-Kind</span>
                 </div>
             </div>
+            <div class="zoom-info" id="zoomInfo">100%</div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('tree-canvas');
-        const ctx = canvas.getContext('2d');
-        const container = document.getElementById('canvas-container');
-        const nodesContainer = document.getElementById('nodes-container');
+        // ===== Konfiguration =====
+        const CONFIG = {
+            CARD_WIDTH: 150,
+            CARD_HEIGHT: 160,
+            COUPLE_GAP: 30,          // Abstand zwischen Ehepartnern
+            SIBLING_GAP: 40,         // Abstand zwischen Geschwistern
+            GENERATION_GAP: 200,     // Vertikaler Abstand zwischen Generationen
+            TREE_GAP: 150,           // Abstand zwischen separaten Bäumen
+            INITIAL_OFFSET_X: 100,
+            INITIAL_OFFSET_Y: 100
+        };
 
-        function resizeCanvas() {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+        // ===== State =====
+        let scale = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let treeData = null;
+        let allPersonsById = new Map();
+        let nodePositions = new Map(); // id -> {x, y, width, height}
+
+        // ===== DOM Elemente =====
+        const container = document.getElementById('canvas-container');
+        const viewport = document.getElementById('tree-viewport');
+        const linesSvg = document.getElementById('lines-svg');
+        const zoomInfo = document.getElementById('zoomInfo');
+
+        // ===== Pan & Zoom (Miro-Style) =====
+        function updateTransform() {
+            viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            zoomInfo.textContent = Math.round(scale * 100) + '%';
         }
-        resizeCanvas();
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-            if (currentTrees) redrawAll(currentTrees);
+
+        // Maus-Drag für Pan
+        container.addEventListener('mousedown', (e) => {
+            if (e.target === container || e.target === viewport || e.target === linesSvg) {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                container.style.cursor = 'grabbing';
+            }
         });
 
-        let currentTrees = null;
-        let personPositions = new Map();
-        let panX = 50;
-        let panY = 50;
-        let zoom = 1;
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+                panX += dx;
+                panY += dy;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                updateTransform();
+            }
+        });
 
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            container.style.cursor = 'grab';
+        });
+
+        // Mausrad für Zoom
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Zoom-Faktor
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.1, Math.min(3, scale * zoomFactor));
+            
+            // Zoom zum Mauszeiger
+            const scaleChange = newScale / scale;
+            panX = mouseX - (mouseX - panX) * scaleChange;
+            panY = mouseY - (mouseY - panY) * scaleChange;
+            
+            scale = newScale;
+            updateTransform();
+        }, { passive: false });
+
+        // Touch-Support für Mobile
+        let lastTouchDist = 0;
+        container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastMouseX = e.touches[0].clientX;
+                lastMouseY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                lastTouchDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && isDragging) {
+                const dx = e.touches[0].clientX - lastMouseX;
+                const dy = e.touches[0].clientY - lastMouseY;
+                panX += dx;
+                panY += dy;
+                lastMouseX = e.touches[0].clientX;
+                lastMouseY = e.touches[0].clientY;
+                updateTransform();
+            } else if (e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const zoomFactor = dist / lastTouchDist;
+                scale = Math.max(0.1, Math.min(3, scale * zoomFactor));
+                lastTouchDist = dist;
+                updateTransform();
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // ===== Zoom Buttons =====
+        function zoomIn() {
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const newScale = Math.min(3, scale * 1.2);
+            const scaleChange = newScale / scale;
+            panX = centerX - (centerX - panX) * scaleChange;
+            panY = centerY - (centerY - panY) * scaleChange;
+            
+            scale = newScale;
+            updateTransform();
+        }
+
+        function zoomOut() {
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const newScale = Math.max(0.1, scale / 1.2);
+            const scaleChange = newScale / scale;
+            panX = centerX - (centerX - panX) * scaleChange;
+            panY = centerY - (centerY - panY) * scaleChange;
+            
+            scale = newScale;
+            updateTransform();
+        }
+
+        function resetView() {
+            scale = 1;
+            panX = CONFIG.INITIAL_OFFSET_X;
+            panY = CONFIG.INITIAL_OFFSET_Y;
+            updateTransform();
+        }
+
+        function fitToScreen() {
+            if (nodePositions.size === 0) return;
+            
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            
+            nodePositions.forEach(pos => {
+                minX = Math.min(minX, pos.x);
+                maxX = Math.max(maxX, pos.x + pos.width);
+                minY = Math.min(minY, pos.y);
+                maxY = Math.max(maxY, pos.y + pos.height);
+            });
+            
+            const treeWidth = maxX - minX + 100;
+            const treeHeight = maxY - minY + 100;
+            const containerRect = container.getBoundingClientRect();
+            
+            scale = Math.min(
+                (containerRect.width - 100) / treeWidth,
+                (containerRect.height - 100) / treeHeight,
+                1.5
+            );
+            scale = Math.max(0.3, scale);
+            
+            panX = (containerRect.width - treeWidth * scale) / 2 - minX * scale + 50;
+            panY = (containerRect.height - treeHeight * scale) / 2 - minY * scale + 50;
+            
+            updateTransform();
+        }
+
+        // ===== Daten laden =====
         async function loadTreeData() {
             try {
                 const response = await fetch('/api/persons/tree');
                 const data = await response.json();
-                if (data.length > 0) {
-                    currentTrees = data;
-                    redrawAll(data);
+                
+                if (data.length === 0) {
+                    showEmptyState();
+                    return;
                 }
+                
+                treeData = data;
+                buildPersonIndex(data);
+                layoutTree(data);
+                renderTree();
+                
+                setTimeout(fitToScreen, 100);
             } catch (error) {
-                console.error('Fehler:', error);
+                console.error('Fehler beim Laden:', error);
             }
         }
 
-        function redrawAll(trees) {
-            personPositions.clear();
-            nodesContainer.innerHTML = '';
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            calculatePositions(trees);
-            drawAllLines();
-            createAllNodeElements();
-        }
-
-        function calculatePositions(trees) {
-            const processed = new Set();
-            let nextX = 100;
-            const levelHeight = 280;
-
-            function addPerson(person, level) {
-                if (processed.has(person.id)) return;
-                processed.add(person.id);
-
-                const y = 100 + (level * levelHeight);
-                const x = panX + nextX;
-
-                personPositions.set(person.id, { x, y, person, level });
-                nextX += 220;
-
-                if (person.ehegatte && !processed.has(person.ehegatte.id)) {
-                    processed.add(person.ehegatte.id);
-                    personPositions.set(person.ehegatte.id, {
-                        x: x + 220,
-                        y,
-                        person: person.ehegatte,
-                        level
-                    });
-                    nextX += 220;
+        function buildPersonIndex(trees) {
+            allPersonsById.clear();
+            
+            function indexPerson(person) {
+                if (!person || allPersonsById.has(person.id)) return;
+                allPersonsById.set(person.id, person);
+                
+                if (person.ehegatte) {
+                    allPersonsById.set(person.ehegatte.id, person.ehegatte);
                 }
-
                 if (person.children) {
-                    person.children.forEach(child => addPerson(child, level + 1));
+                    person.children.forEach(indexPerson);
                 }
             }
-
-            trees.forEach(tree => addPerson(tree, 0));
+            
+            trees.forEach(indexPerson);
         }
 
-        function drawAllLines() {
-            if (personPositions.size === 0) return;
+        function showEmptyState() {
+            viewport.innerHTML = `
+                <div class="empty-state">
+                    <h2>Noch keine Personen im Stammbaum</h2>
+                    <p>Fügen Sie Ihre erste Person hinzu, um den Stammbaum zu starten.</p>
+                    <a href="/edit">➕ Person hinzufügen</a>
+                </div>
+            `;
+        }
 
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.scale(zoom, zoom);
-            ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
-            personPositions.forEach((pos) => {
-                drawPersonConnections(pos);
+        // ===== Layout-Berechnung =====
+        function layoutTree(trees) {
+            nodePositions.clear();
+            let currentX = 0;
+            
+            trees.forEach((tree, index) => {
+                const treeWidth = layoutSubtree(tree, currentX, 0, 0);
+                currentX += treeWidth + CONFIG.TREE_GAP;
             });
-
-            ctx.restore();
         }
 
-        function drawPersonConnections(nodePos) {
-            const { x, y, person } = nodePos;
-
-            if (person.ehegatte && personPositions.has(person.ehegatte.id)) {
-                const partnerPos = personPositions.get(person.ehegatte.id);
-                drawLine(x + 80, y, partnerPos.x - 80, y, '#e91e63', 2, [5, 5]);
-            }
-
+        function layoutSubtree(person, startX, level, parentCenterX) {
+            if (!person || nodePositions.has(person.id)) return 0;
+            
+            const y = level * CONFIG.GENERATION_GAP;
+            const hasSpouse = person.ehegatte && !nodePositions.has(person.ehegatte.id);
+            
+            // Berechne Breite für Kinder
+            let childrenWidth = 0;
+            const childWidths = [];
+            
             if (person.children && person.children.length > 0) {
-                const childPositions = person.children
-                    .map(child => personPositions.get(child.id))
-                    .filter(p => p);
-
-                if (childPositions.length === 0) return;
-
-                let centerX = x;
-                if (person.ehegatte && personPositions.has(person.ehegatte.id)) {
-                    const partnerPos = personPositions.get(person.ehegatte.id);
-                    centerX = (x + partnerPos.x) / 2;
-                }
-
-                const parentY = y + 100;
-                const midY = parentY + 70;
-
-                drawLine(centerX, parentY, centerX, midY, '#667eea', 2);
-
-                const childXs = childPositions.map(p => p.x);
-                const minX = Math.min(...childXs);
-                const maxX = Math.max(...childXs);
-                const childCenterX = (minX + maxX) / 2;
-
-                drawLine(centerX, midY, childCenterX, midY, '#667eea', 2);
-
-                childPositions.forEach(childPos => {
-                    const childY = childPos.y - 100;
-                    drawLine(childPos.x, midY, childPos.x, childY, '#667eea', 2);
+                person.children.forEach(child => {
+                    const childWidth = calculateSubtreeWidth(child);
+                    childWidths.push(childWidth);
+                    childrenWidth += childWidth;
+                });
+                childrenWidth += (person.children.length - 1) * CONFIG.SIBLING_GAP;
+            }
+            
+            // Breite dieser Familie (Paar oder einzeln)
+            const coupleWidth = hasSpouse 
+                ? CONFIG.CARD_WIDTH * 2 + CONFIG.COUPLE_GAP 
+                : CONFIG.CARD_WIDTH;
+            
+            const totalWidth = Math.max(coupleWidth, childrenWidth);
+            const centerX = startX + totalWidth / 2;
+            
+            // Positioniere Hauptperson
+            const personX = hasSpouse 
+                ? centerX - CONFIG.CARD_WIDTH - CONFIG.COUPLE_GAP / 2
+                : centerX - CONFIG.CARD_WIDTH / 2;
+            
+            nodePositions.set(person.id, {
+                x: personX,
+                y: y,
+                width: CONFIG.CARD_WIDTH,
+                height: CONFIG.CARD_HEIGHT,
+                hasSpouse: hasSpouse,
+                spouseId: hasSpouse ? person.ehegatte.id : null
+            });
+            
+            // Positioniere Ehepartner
+            if (hasSpouse) {
+                const spouseX = centerX + CONFIG.COUPLE_GAP / 2;
+                nodePositions.set(person.ehegatte.id, {
+                    x: spouseX,
+                    y: y,
+                    width: CONFIG.CARD_WIDTH,
+                    height: CONFIG.CARD_HEIGHT,
+                    hasSpouse: true,
+                    spouseId: person.id
                 });
             }
+            
+            // Positioniere Kinder
+            if (person.children && person.children.length > 0) {
+                let childX = centerX - childrenWidth / 2;
+                
+                person.children.forEach((child, index) => {
+                    layoutSubtree(child, childX, level + 1, centerX);
+                    childX += childWidths[index] + CONFIG.SIBLING_GAP;
+                });
+            }
+            
+            return totalWidth;
         }
 
-        function drawLine(x1, y1, x2, y2, color, width, dash = null) {
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = width;
-            ctx.globalAlpha = 0.7;
-            if (dash) ctx.setLineDash(dash);
-
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        function createAllNodeElements() {
-            personPositions.forEach((pos, id) => {
-                const node = document.createElement('div');
-                node.className = 'node-card';
-                node.style.left = (pos.x - 80) + 'px';
-                node.style.top = (pos.y - 90) + 'px';
-
-                const { person } = pos;
-                let datesHtml = '';
-                if (person.geburtsdatum) {
-                    datesHtml += `<div class="node-dates">* ${formatDate(person.geburtsdatum)}`;
-                    if (person.todesdatum) {
-                        datesHtml += `<br/><span class="deceased">✝ ${formatDate(person.todesdatum)}</span>`;
-                    } else {
-                        datesHtml += `<span class="alive"> (lebend)</span>`;
-                    }
-                    datesHtml += `</div>`;
+        function calculateSubtreeWidth(person) {
+            if (!person) return 0;
+            
+            const hasSpouse = person.ehegatte != null;
+            const coupleWidth = hasSpouse 
+                ? CONFIG.CARD_WIDTH * 2 + CONFIG.COUPLE_GAP 
+                : CONFIG.CARD_WIDTH;
+            
+            if (!person.children || person.children.length === 0) {
+                return coupleWidth;
+            }
+            
+            let childrenWidth = 0;
+            person.children.forEach((child, index) => {
+                childrenWidth += calculateSubtreeWidth(child);
+                if (index < person.children.length - 1) {
+                    childrenWidth += CONFIG.SIBLING_GAP;
                 }
-
-                node.innerHTML = `
-                    <img src="${person.bildpfad || '/placeholder.png'}" alt="${person.fullName}" class="node-image" onerror="this.src='/placeholder.png'">
-                    <div class="node-name">${person.fullName}</div>
-                    ${datesHtml}
-                `;
-
-                node.onclick = (e) => {
-                    e.stopPropagation();
-                    window.location.href = `/edit?id=${person.id}`;
-                };
-
-                nodesContainer.appendChild(node);
             });
+            
+            return Math.max(coupleWidth, childrenWidth);
+        }
+
+        // ===== Rendering =====
+        function renderTree() {
+            // Lösche altes Rendering
+            viewport.innerHTML = '<svg id="lines-svg"></svg>';
+            const newLinesSvg = document.getElementById('lines-svg');
+            
+            // Bestimme SVG-Größe
+            let maxX = 0, maxY = 0;
+            nodePositions.forEach(pos => {
+                maxX = Math.max(maxX, pos.x + pos.width + 100);
+                maxY = Math.max(maxY, pos.y + pos.height + 100);
+            });
+            newLinesSvg.style.width = maxX + 'px';
+            newLinesSvg.style.height = maxY + 'px';
+            
+            // Zeichne Linien
+            drawConnections(newLinesSvg);
+            
+            // Erstelle Personen-Karten
+            nodePositions.forEach((pos, personId) => {
+                const person = allPersonsById.get(personId);
+                if (person) {
+                    createPersonCard(person, pos);
+                }
+            });
+        }
+
+        function drawConnections(svg) {
+            // Ehe-Linien zeichnen
+            const drawnMarriages = new Set();
+            
+            nodePositions.forEach((pos, personId) => {
+                if (pos.hasSpouse && pos.spouseId) {
+                    const key = [personId, pos.spouseId].sort().join('-');
+                    if (!drawnMarriages.has(key)) {
+                        drawnMarriages.add(key);
+                        const spousePos = nodePositions.get(pos.spouseId);
+                        if (spousePos) {
+                            const y = pos.y + CONFIG.CARD_HEIGHT / 2;
+                            const x1 = pos.x + CONFIG.CARD_WIDTH;
+                            const x2 = spousePos.x;
+                            
+                            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            line.setAttribute('x1', x1);
+                            line.setAttribute('y1', y);
+                            line.setAttribute('x2', x2);
+                            line.setAttribute('y2', y);
+                            line.setAttribute('class', 'marriage-line');
+                            svg.appendChild(line);
+                        }
+                    }
+                }
+            });
+            
+            // Eltern-Kind-Linien zeichnen
+            if (treeData) {
+                treeData.forEach(tree => drawChildConnections(svg, tree));
+            }
+        }
+
+        function drawChildConnections(svg, person) {
+            if (!person || !person.children || person.children.length === 0) return;
+            
+            const parentPos = nodePositions.get(person.id);
+            if (!parentPos) return;
+            
+            // Berechne Mittelpunkt zwischen Eltern
+            let parentCenterX = parentPos.x + CONFIG.CARD_WIDTH / 2;
+            if (parentPos.hasSpouse && parentPos.spouseId) {
+                const spousePos = nodePositions.get(parentPos.spouseId);
+                if (spousePos) {
+                    parentCenterX = (parentPos.x + CONFIG.CARD_WIDTH + spousePos.x) / 2;
+                }
+            }
+            
+            const parentBottomY = parentPos.y + CONFIG.CARD_HEIGHT;
+            const midY = parentBottomY + (CONFIG.GENERATION_GAP - CONFIG.CARD_HEIGHT) / 2;
+            
+            // Vertikale Linie von Eltern runter
+            const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            vLine.setAttribute('x1', parentCenterX);
+            vLine.setAttribute('y1', parentBottomY);
+            vLine.setAttribute('x2', parentCenterX);
+            vLine.setAttribute('y2', midY);
+            vLine.setAttribute('class', 'child-line');
+            svg.appendChild(vLine);
+            
+            // Sammle Kind-Positionen
+            const childCenters = [];
+            person.children.forEach(child => {
+                const childPos = nodePositions.get(child.id);
+                if (childPos) {
+                    let childCenterX = childPos.x + CONFIG.CARD_WIDTH / 2;
+                    if (childPos.hasSpouse && childPos.spouseId) {
+                        const childSpousePos = nodePositions.get(childPos.spouseId);
+                        if (childSpousePos) {
+                            childCenterX = (childPos.x + CONFIG.CARD_WIDTH + childSpousePos.x) / 2;
+                        }
+                    }
+                    childCenters.push({ x: childCenterX, y: childPos.y });
+                }
+            });
+            
+            if (childCenters.length > 0) {
+                // Horizontale Linie über den Kindern
+                const minChildX = Math.min(...childCenters.map(c => c.x));
+                const maxChildX = Math.max(...childCenters.map(c => c.x));
+                
+                // Linie von parentCenter zu Kinder-Bereich
+                if (childCenters.length === 1) {
+                    // Nur ein Kind: direkte Linie
+                    const childX = childCenters[0].x;
+                    if (childX !== parentCenterX) {
+                        const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        hLine.setAttribute('x1', parentCenterX);
+                        hLine.setAttribute('y1', midY);
+                        hLine.setAttribute('x2', childX);
+                        hLine.setAttribute('y2', midY);
+                        hLine.setAttribute('class', 'child-line');
+                        svg.appendChild(hLine);
+                    }
+                } else {
+                    // Mehrere Kinder: T-Form
+                    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    hLine.setAttribute('x1', minChildX);
+                    hLine.setAttribute('y1', midY);
+                    hLine.setAttribute('x2', maxChildX);
+                    hLine.setAttribute('y2', midY);
+                    hLine.setAttribute('class', 'child-line');
+                    svg.appendChild(hLine);
+                }
+                
+                // Vertikale Linien zu jedem Kind
+                childCenters.forEach(childCenter => {
+                    const vChildLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    vChildLine.setAttribute('x1', childCenter.x);
+                    vChildLine.setAttribute('y1', midY);
+                    vChildLine.setAttribute('x2', childCenter.x);
+                    vChildLine.setAttribute('y2', childCenter.y);
+                    vChildLine.setAttribute('class', 'child-line');
+                    svg.appendChild(vChildLine);
+                });
+            }
+            
+            // Rekursiv für Kinder
+            person.children.forEach(child => drawChildConnections(svg, child));
+        }
+
+        function createPersonCard(person, pos) {
+            const card = document.createElement('div');
+            card.className = 'person-card';
+            card.style.left = pos.x + 'px';
+            card.style.top = pos.y + 'px';
+            
+            let datesHtml = '';
+            if (person.geburtsdatum) {
+                datesHtml = `<div class="person-dates">* ${formatDate(person.geburtsdatum)}`;
+                if (person.todesdatum) {
+                    datesHtml += `<br><span class="deceased">† ${formatDate(person.todesdatum)}</span>`;
+                } else {
+                    datesHtml += ` <span class="alive">(lebend)</span>`;
+                }
+                datesHtml += '</div>';
+            }
+            
+            card.innerHTML = `
+                <img src="${person.bildpfad || '/placeholder.png'}" 
+                     alt="${person.fullName}" 
+                     class="person-image" 
+                     onerror="this.src='/placeholder.png'">
+                <div class="person-name">${person.fullName || person.vorname + ' ' + person.nachname}</div>
+                ${datesHtml}
+            `;
+            
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.location.href = `/edit?id=${person.id}`;
+            });
+            
+            viewport.appendChild(card);
         }
 
         function formatDate(dateString) {
-            if (!dateString) return "?";
+            if (!dateString) return '?';
             const date = new Date(dateString);
-            return date.toLocaleDateString("de-DE", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit"
+            return date.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
             });
         }
 
-        function resetZoom() {
-            zoom = 1;
-            panX = 50;
-            panY = 50;
-            if (currentTrees) redrawAll(currentTrees);
-        }
+        // ===== Start =====
+        window.addEventListener('load', () => {
+            resetView();
+            loadTreeData();
+        });
 
-        function zoomIn() {
-            zoom *= 1.2;
-            if (currentTrees) drawAllLines();
-        }
-
-        function zoomOut() {
-            zoom /= 1.2;
-            if (currentTrees) drawAllLines();
-        }
-
-        window.addEventListener('load', loadTreeData);
+        window.addEventListener('resize', () => {
+            if (treeData) {
+                setTimeout(fitToScreen, 100);
+            }
+        });
     </script>
 </body>
 </html>
