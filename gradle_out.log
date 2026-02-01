@@ -1,0 +1,73 @@
+Starting a Gradle Daemon, 2 busy and 1 incompatible and 4 stopped Daemons could not be reused, use --status for details
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.2)
+
+2026-02-01T15:44:57.937+01:00  INFO 2816 --- [Stammbaum] [           main] d.d.stammbaum.StammbaumApplication       : Starting StammbaumApplication using Java 25.0.2 with PID 2816 (C:\Users\Furka\Desktop\Java\Lernen\Stammbaum\build\classes\java\main started by Furka in C:\Users\Furka\Desktop\Java\Lernen\Stammbaum)
+2026-02-01T15:44:57.940+01:00  INFO 2816 --- [Stammbaum] [           main] d.d.stammbaum.StammbaumApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-02-01T15:44:58.334+01:00  INFO 2816 --- [Stammbaum] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-01T15:44:58.369+01:00  INFO 2816 --- [Stammbaum] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 30 ms. Found 1 JPA repository interface.
+2026-02-01T15:44:58.685+01:00  INFO 2816 --- [Stammbaum] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-02-01T15:44:58.698+01:00  INFO 2816 --- [Stammbaum] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-01T15:44:58.698+01:00  INFO 2816 --- [Stammbaum] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.15]
+2026-02-01T15:44:58.742+01:00  INFO 2816 --- [Stammbaum] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 768 ms
+2026-02-01T15:44:58.841+01:00  INFO 2816 --- [Stammbaum] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-02-01T15:44:58.880+01:00  INFO 2816 --- [Stammbaum] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.1.Final
+2026-02-01T15:44:59.257+01:00  INFO 2816 --- [Stammbaum] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-01T15:44:59.283+01:00  INFO 2816 --- [Stammbaum] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-01T15:44:59.420+01:00  INFO 2816 --- [Stammbaum] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:stammbaum user=SA
+2026-02-01T15:44:59.421+01:00  INFO 2816 --- [Stammbaum] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-01T15:44:59.440+01:00  WARN 2816 --- [Stammbaum] [           main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-01T15:44:59.460+01:00  INFO 2816 --- [Stammbaum] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:h2:mem:stammbaum]
+	Database driver: H2 JDBC Driver
+	Database dialect: H2Dialect
+	Database version: 2.4.240
+	Default catalog/schema: STAMMBAUM/PUBLIC
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: 100
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-01T15:45:00.203+01:00  INFO 2816 --- [Stammbaum] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-01T15:45:00.240+01:00  INFO 2816 --- [Stammbaum] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-01T15:45:00.298+01:00  INFO 2816 --- [Stammbaum] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-01T15:45:00.734+01:00  WARN 2816 --- [Stammbaum] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-01T15:45:00.746+01:00  INFO 2816 --- [Stammbaum] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-02-01T15:45:00.989+01:00  WARN 2816 --- [Stammbaum] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-02-01T15:45:00.990+01:00  INFO 2816 --- [Stammbaum] [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-01T15:45:00.993+01:00  INFO 2816 --- [Stammbaum] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-01T15:45:00.994+01:00  INFO 2816 --- [Stammbaum] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-01T15:45:01.001+01:00  INFO 2816 --- [Stammbaum] [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-02-01T15:45:01.012+01:00 ERROR 2816 --- [Stammbaum] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+
+> Task :bootRun FAILED
+4 actionable tasks: 1 executed, 3 up-to-date

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Familien Stammbaum</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+        }
+
+        .btn-edit {
+            background: #4CAF50;
+        }
+
+        .btn-edit:hover {
+            background: #45a049;
+        }
+
+        #canvas-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            text-align: center;
+            min-width: 140px;
+            transition: all 0.3s;
+        }
+
+        .node-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transform: scale(1.05);
+        }
+
+        .node-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #667eea;
+            margin-bottom: 8px;
+        }
+
+        .node-name {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .node-dates {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.3;
+        }
+
+        .node-dates .alive {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .node-dates .deceased {
+            color: #999;
+        }
+
+        .link {
+            fill: none;
+            stroke: #999;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+
+        .link:hover {
+            stroke: #667eea;
+            stroke-width: 3;
+            opacity: 1;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        .legend-item {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            background: #999;
+        }
+
+        .legend-color.living {
+            background: #4CAF50;
+            height: 15px;
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .node-card {
+                min-width: 120px;
+            }
+
+            .node-image {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Familien Stammbaum</h1>
+            <div class="header-buttons">
+                <button class="btn" onclick="resetZoom()">Zurücksetzen</button>
+                <a href="/edit" class="btn btn-edit" style="text-decoration: none; cursor: pointer;">Bearbeiten</a>
+            </div>
+        </div>
+        <div id="canvas-container">
+            <svg id="tree-svg"></svg>
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomIn()" title="Vergrößern">+</button>
+                <button class="zoom-btn" onclick="zoomOut()" title="Verkleinern">−</button>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color"></div>
+                    <span>Eltern-Kind Beziehung</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color living"></div>
+                    <span>Lebend</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let svg, g, tree, root, currentScale = 1;
+        const margin = { top: 40, right: 40, bottom: 40, left: 40 };
+        const width = window.innerWidth - margin.left - margin.right;
+        const height = window.innerHeight - margin.top - margin.bottom - 60;
+
+        // D3 Zoom Verhalten
+        const zoom = d3.zoom()
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+                currentScale = event.transform.k;
+            });
+
+        // Initialisierung
+        function init() {
+            svg = d3.select("#tree-svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .call(zoom);
+
+            g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Tree Layout
+            tree = d3.tree().size([width * 2, height]);
+
+            loadTreeData();
+        }
+
+        // Lade Stammbaum-Daten von API
+        function loadTreeData() {
+            fetch("/api/persons/tree")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        drawTrees(data);
+                    } else {
+                        showEmptyState();
+                    }
+                })
+                .catch(error => {
+                    console.error("Fehler beim Laden der Daten:", error);
+                    showErrorState();
+                });
+        }
+
+        function drawTrees(trees) {
+            g.selectAll("*").remove();
+
+            let yOffset = 0;
+            trees.forEach((treeData, index) => {
+                drawTree(treeData, yOffset);
+                yOffset += 400;
+            });
+
+            // Zoom zu Anfang anpassen
+            setTimeout(() => {
+                const bounds = g.node().getBBox();
+                const fullWidth = bounds.width;
+                const fullHeight = bounds.height;
+                const midX = bounds.x + fullWidth / 2;
+                const midY = bounds.y + fullHeight / 2;
+
+                const scale = Math.min(
+                    (width) / fullWidth,
+                    (height) / fullHeight
+                ) * 0.8;
+
+                const translate = [
+                    width / 2 - midX * scale,
+                    height / 2 - midY * scale
+                ];
+
+                svg.transition()
+                    .duration(750)
+                    .call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                            .translate(translate[0] + margin.left, translate[1] + margin.top)
+                            .scale(scale)
+                    );
+            }, 100);
+        }
+
+        function drawTree(treeData, yOffset) {
+            const rootNode = d3.hierarchy(treeData);
+
+            // Erhöhe die Breite und Höhe für bessere Abstände
+            const treeWidth = width * 3;
+            const treeHeight = height * 2;
+
+            tree.size([treeWidth, treeHeight - yOffset]);
+            tree(rootNode);
+
+            // Links zeichnen
+            g.selectAll(".link-group")
+                .data([rootNode])
+                .join("g")
+                .attr("class", "link-group")
+                .selectAll(".link")
+                .data(rootNode.links())
+                .join("line")
+                .attr("class", "link")
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            // Nodes zeichnen
+            const nodes = g.selectAll(".node")
+                .data(rootNode.descendants())
+                .join("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            nodes.append("foreignObject")
+                .attr("width", 160)
+                .attr("height", 180)
+                .attr("x", -80)
+                .attr("y", -90)
+                .append("xhtml:div")
+                .attr("class", "node-card")
+                .html(d => {
+                    let datesHtml = "";
+                    if (d.data.geburtsdatum) {
+                        datesHtml += `<div class="node-dates">`;
+                        datesHtml += `*${formatDate(d.data.geburtsdatum)}`;
+                        if (d.data.todesdatum) {
+                            datesHtml += `<br/><span class="deceased">†${formatDate(d.data.todesdatum)}</span>`;
+                        } else {
+                            datesHtml += `<span class="alive"> (lebend)</span>`;
+                        }
+                        datesHtml += `</div>`;
+                    }
+
+                    return `
+                        <img src="${d.data.bildpfad || '/placeholder.png'}" alt="${d.data.fullName}" class="node-image" onerror="this.src='/placeholder.png'">
+                        <div class="node-name">${d.data.fullName}</div>
+                        ${datesHtml}
+                    `;
+                })
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    showPersonDetails(d.data.id);
+                });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return "?";
+            const date = new Date(dateString);
+            return date.toLocaleDateString("de-DE", { year: "numeric", month: "2-digit", day: "2-digit" });
+        }
+
+        function showPersonDetails(personId) {
+            // Hier könnte man ein Modal anzeigen
+            console.log("Zeige Details für Person:", personId);
+        }
+
+        function showEmptyState() {
+            g.append("text")
+                .attr("x", width / 2)
+                .attr("y", height / 2)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "20px")
+                .attr("fill", "#999")
+                .text("Keine Personen im Stammbaum. Bitte fügen Sie eine Person hinzu.");
+        }
+
+        function showErrorState() {
+            g.append("text")
+                .attr("x", width / 2)
+                .attr("y", height / 2)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "18px")
+                .attr("fill", "#d32f2f")
+                .text("Fehler beim Laden der Daten");
+        }
+
+        function resetZoom() {
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity.translate(margin.left, margin.top));
+        }
+
+        function zoomIn() {
+            svg.transition()
+                .duration(300)
+                .call(zoom.scaleBy, 1.3);
+        }
+
+        function zoomOut() {
+            svg.transition()
+                .duration(300)
+                .call(zoom.scaleBy, 0.77);
+        }
+
+
+        // Initialisiere beim Laden
+        window.addEventListener("load", init);
+        window.addEventListener("resize", () => {
+            location.reload();
+        });
+    </script>
+</body>
+</html>

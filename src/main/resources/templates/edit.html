@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stammbaum Verwaltung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+        }
+
+        .header a {
+            background: white;
+            color: #667eea;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-upload label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 0;
+        }
+
+        .file-upload label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-upload input[type=file]:focus + label {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .image-preview {
+            margin-top: 10px;
+            width: 100%;
+            max-width: 150px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b71c1c;
+        }
+
+        .list-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .list-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+        }
+
+        .person-list {
+            list-style: none;
+        }
+
+        .person-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .person-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .person-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .person-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-sm-edit {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-sm-edit:hover {
+            background: #1976D2;
+        }
+
+        .btn-sm-delete {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .btn-sm-delete:hover {
+            background: #b71c1c;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .alert-error {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .alert-info {
+            background: #2196F3;
+            color: white;
+        }
+
+        .parent-selector {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .parent-selector h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .parent-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .person-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .person-actions {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .btn-sm {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Stammbaum Verwaltung</h1>
+            <a href="/">Zur Ansicht</a>
+        </div>
+
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-error" id="errorAlert"></div>
+
+        <div class="content">
+            <!-- Formularbereich -->
+            <div class="form-section">
+                <h2>Person hinzufügen / Bearbeiten</h2>
+
+                <div class="form-group">
+                    <label for="personId">Person ID (nur zum Bearbeiten)</label>
+                    <input type="text" id="personId" placeholder="Automatisch generiert" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="vorname">Vorname *</label>
+                    <input type="text" id="vorname" placeholder="z.B. Johann" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="nachname">Nachname *</label>
+                    <input type="text" id="nachname" placeholder="z.B. Müller" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="geburtsdatum">Geburtsdatum</label>
+                    <input type="date" id="geburtsdatum">
+                </div>
+
+                <div class="form-group">
+                    <label for="todesdatum">Todesdatum (optional)</label>
+                    <input type="date" id="todesdatum">
+                </div>
+
+                <div class="form-group">
+                    <label for="bildupload">Bild hochladen (JPG, PNG, max. 5MB)</label>
+                    <div class="file-upload">
+                        <input type="file" id="bildupload" accept="image/*">
+                        <label for="bildupload">📸 Klick zum Bild hochladen</label>
+                    </div>
+                    <img id="imagePreview" class="image-preview" alt="Bildvorschau">
+                </div>
+
+                <div class="parent-selector">
+                    <h4>Ehegatte zuordnen (optional)</h4>
+                    <div class="form-group">
+                        <label for="ehegatte">Ehegatte/in</label>
+                        <select id="ehegatte">
+                            <option value="">-- Keine --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="parent-selector">
+                    <h4>Eltern zuordnen (optional)</h4>
+                    <div class="parent-options">
+                        <div class="form-group">
+                            <label for="mutterId">Mutter</label>
+                            <select id="mutterId">
+                                <option value="">-- Keine --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="vaterId">Vater</label>
+                            <select id="vaterId">
+                                <option value="">-- Keine --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="submitBtn" onclick="savePerson()">Speichern</button>
+                    <button class="btn btn-secondary" onclick="resetForm()">Zurücksetzen</button>
+                </div>
+            </form-section>
+
+            <!-- Listensektion -->
+            <div class="list-section">
+                <h2>Personen im Stammbaum</h2>
+
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Nach Name suchen..." onkeyup="filterList()">
+                </div>
+
+                <ul class="person-list" id="personList">
+                    <li style="text-align: center; padding: 20px; color: #999;">Lädt...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEditingId = null;
+
+        // Lade Personenliste beim Start
+        window.addEventListener("load", () => {
+            loadPersonList();
+            loadParentOptions();
+        });
+
+        function loadPersonList() {
+            fetch("/api/persons")
+                .then(response => response.json())
+                .then(persons => {
+                    displayPersonList(persons);
+                })
+                .catch(error => {
+                    showError("Fehler beim Laden der Personenliste: " + error);
+                });
+        }
+
+        function loadParentOptions() {
+            fetch("/api/persons")
+                .then(response => response.json())
+                .then(persons => {
+                    const mutterSelect = document.getElementById("mutterId");
+                    const vaterSelect = document.getElementById("vaterId");
+                    const ehegateSelect = document.getElementById("ehegatte");
+
+                    persons.forEach(person => {
+                        const option1 = document.createElement("option");
+                        option1.value = person.id;
+                        option1.textContent = person.fullName || (person.vorname + " " + person.nachname);
+                        mutterSelect.appendChild(option1);
+
+                        const option2 = document.createElement("option");
+                        option2.value = person.id;
+                        option2.textContent = person.fullName || (person.vorname + " " + person.nachname);
+                        vaterSelect.appendChild(option2);
+
+                        const option3 = document.createElement("option");
+                        option3.value = person.id;
+                        option3.textContent = person.fullName || (person.vorname + " " + person.nachname);
+                        ehegateSelect.appendChild(option3);
+                    });
+                })
+                .catch(error => {
+                    console.error("Fehler beim Laden der Optionen:", error);
+                });
+        }
+
+        function displayPersonList(persons) {
+            const listDiv = document.getElementById("personList");
+            listDiv.innerHTML = "";
+
+            if (persons.length === 0) {
+                listDiv.innerHTML = '<li style="text-align: center; padding: 20px; color: #999;">Keine Personen vorhanden</li>';
+                return;
+            }
+
+            persons.forEach(person => {
+                const li = document.createElement("li");
+                li.className = "person-item";
+                li.innerHTML = `
+                    <div class="person-info">
+                        <div class="person-name">${person.vorname} ${person.nachname}</div>
+                        <div class="person-meta">
+                            ${person.geburtsdatum ? '* ' + formatDate(person.geburtsdatum) : ''}
+                            ${person.todesdatum ? ' † ' + formatDate(person.todesdatum) : ''}
+                        </div>
+                    </div>
+                    <div class="person-actions">
+                        <button class="btn-sm btn-sm-edit" onclick="editPerson(${person.id})">Bearbeiten</button>
+                        <button class="btn-sm btn-sm-delete" onclick="deletePerson(${person.id})">Löschen</button>
+                    </div>
+                `;
+                listDiv.appendChild(li);
+            });
+        }
+
+        function filterList() {
+            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            const items = document.querySelectorAll(".person-item");
+
+            items.forEach(item => {
+                const name = item.querySelector(".person-name").textContent.toLowerCase();
+                item.style.display = name.includes(searchTerm) ? "" : "none";
+            });
+        }
+
+        function editPerson(personId) {
+            fetch(`/api/persons/${personId}`)
+                .then(response => response.json())
+                .then(person => {
+                    currentEditingId = personId;
+                    document.getElementById("personId").value = person.id;
+                    document.getElementById("vorname").value = person.vorname;
+                    document.getElementById("nachname").value = person.nachname;
+                    document.getElementById("geburtsdatum").value = person.geburtsdatum || "";
+                    document.getElementById("todesdatum").value = person.todesdatum || "";
+                    document.getElementById("ehegatte").value = person.ehegatte ? person.ehegatte.id : "";
+                    document.getElementById("submitBtn").textContent = "Aktualisieren";
+
+                    // Scroll zum Formular
+                    document.querySelector(".form-section").scrollIntoView({ behavior: "smooth" });
+                })
+                .catch(error => {
+                    showError("Fehler beim Laden der Person: " + error);
+                });
+        }
+
+        function savePerson() {
+            const vorname = document.getElementById("vorname").value.trim();
+            const nachname = document.getElementById("nachname").value.trim();
+            const geburtsdatum = document.getElementById("geburtsdatum").value;
+            const todesdatum = document.getElementById("todesdatum").value;
+            const bildFile = document.getElementById("bildupload").files[0];
+            const mutterId = document.getElementById("mutterId").value;
+            const vaterId = document.getElementById("vaterId").value;
+            const ehegatteId = document.getElementById("ehegatte").value;
+
+            if (!vorname || !nachname) {
+                showError("Bitte Vorname und Nachname eingeben");
+                return;
+            }
+
+            const personData = {
+                vorname,
+                nachname,
+                geburtsdatum: geburtsdatum || null,
+                todesdatum: todesdatum || null,
+                mutter: mutterId ? { id: parseInt(mutterId) } : null,
+                vater: vaterId ? { id: parseInt(vaterId) } : null,
+                ehegatte: ehegatteId ? { id: parseInt(ehegatteId) } : null
+            };
+
+            const url = currentEditingId ? `/api/persons/${currentEditingId}` : "/api/persons";
+            const method = currentEditingId ? "PUT" : "POST";
+
+            fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(personData)
+            })
+            .then(response => response.json())
+            .then(savedPerson => {
+                // Bild hochladen falls vorhanden
+                if (bildFile) {
+                    uploadImage(savedPerson.id, bildFile);
+                } else {
+                    showSuccess(currentEditingId ? "Person aktualisiert!" : "Person hinzugefügt!");
+                    resetForm();
+                    loadPersonList();
+                    loadParentOptions();
+                }
+            })
+            .catch(error => {
+                showError("Fehler beim Speichern: " + error);
+            });
+        }
+
+        function uploadImage(personId, file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch(`/api/persons/${personId}/upload-image`, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showSuccess(currentEditingId ? "Person aktualisiert!" : "Person hinzugefügt!");
+                resetForm();
+                loadPersonList();
+                loadParentOptions();
+            })
+            .catch(error => {
+                showError("Fehler beim Bildupload: " + error);
+            });
+        }
+
+        function deletePerson(personId) {
+            if (confirm("Sind Sie sicher, dass Sie diese Person löschen möchten?")) {
+                fetch(`/api/persons/${personId}`, {
+                    method: "DELETE"
+                })
+                .then(() => {
+                    showSuccess("Person gelöscht!");
+                    loadPersonList();
+                    loadParentOptions();
+                })
+                .catch(error => {
+                    showError("Fehler beim Löschen: " + error);
+                });
+            }
+        }
+
+        function resetForm() {
+            document.getElementById("personId").value = "";
+            document.getElementById("vorname").value = "";
+            document.getElementById("nachname").value = "";
+            document.getElementById("geburtsdatum").value = "";
+            document.getElementById("todesdatum").value = "";
+            document.getElementById("bildupload").value = "";
+            document.getElementById("imagePreview").classList.remove("show");
+            document.getElementById("mutterId").value = "";
+            document.getElementById("vaterId").value = "";
+            document.getElementById("ehegatte").value = "";
+            document.getElementById("submitBtn").textContent = "Speichern";
+            currentEditingId = null;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return "";
+            const date = new Date(dateString);
+            return date.toLocaleDateString("de-DE");
+        }
+
+        function showSuccess(message) {
+            const alert = document.getElementById("successAlert");
+            alert.textContent = message;
+            alert.classList.add("show");
+            setTimeout(() => alert.classList.remove("show"), 3000);
+        }
+
+        function showError(message) {
+            const alert = document.getElementById("errorAlert");
+            alert.textContent = message;
+            alert.classList.add("show");
+            setTimeout(() => alert.classList.remove("show"), 3000);
+        }
+
+        // Bildvorschau
+        document.getElementById("bildupload").addEventListener("change", function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById("imagePreview").src = event.target.result;
+                    document.getElementById("imagePreview").classList.add("show");
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>
