@@ -51,6 +51,7 @@ public class PersonService {
         result.put("person", person);
         result.put("mutter", person.getMutter());
         result.put("vater", person.getVater());
+        result.put("ehegatte", person.getEhegatte());
         result.put("kinderAlsMutter", person.getKinderAlsMutter());
         result.put("kinderAlsVater", person.getKinderAlsVater());
         return result;

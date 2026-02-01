@@ -57,25 +57,88 @@ public class PersonController {
 
     // PUT Person aktualisieren
     @PutMapping("/{id}")
-    public ResponseEntity<Person> updatePerson(@PathVariable Long id, @RequestBody Person person) {
+    public ResponseEntity<Person> updatePerson(@PathVariable Long id, @RequestBody Map<String, Object> personData) {
         Person existingPerson = personService.getPersonById(id);
 
-        existingPerson.setVorname(person.getVorname());
-        existingPerson.setNachname(person.getNachname());
-        existingPerson.setGeburtsdatum(person.getGeburtsdatum());
-        existingPerson.setTodesdatum(person.getTodesdatum());
-
-        // Eltern-Beziehungen nur wenn explizit gesetzt
-        if (person.getMutter() != null) {
-            existingPerson.setMutter(person.getMutter());
+        // Grunddaten aktualisieren
+        if (personData.containsKey("vorname")) {
+            existingPerson.setVorname((String) personData.get("vorname"));
         }
-        if (person.getVater() != null) {
-            existingPerson.setVater(person.getVater());
+        if (personData.containsKey("nachname")) {
+            existingPerson.setNachname((String) personData.get("nachname"));
+        }
+        if (personData.containsKey("geburtsdatum")) {
+            String geburtsdatum = (String) personData.get("geburtsdatum");
+            existingPerson.setGeburtsdatum(geburtsdatum != null && !geburtsdatum.isEmpty() 
+                ? java.time.LocalDate.parse(geburtsdatum) : null);
+        }
+        if (personData.containsKey("todesdatum")) {
+            String todesdatum = (String) personData.get("todesdatum");
+            existingPerson.setTodesdatum(todesdatum != null && !todesdatum.isEmpty() 
+                ? java.time.LocalDate.parse(todesdatum) : null);
         }
 
-        // Ehegatte-Beziehung nur wenn explizit gesetzt
-        if (person.getEhegatte() != null) {
-            existingPerson.setEhegatte(person.getEhegatte());
+        // Mutter-Beziehung aktualisieren (auch Entfernen möglich)
+        if (personData.containsKey("mutter")) {
+            Object mutterData = personData.get("mutter");
+            if (mutterData == null) {
+                existingPerson.setMutter(null);
+            } else if (mutterData instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> mutterMap = (Map<String, Object>) mutterData;
+                Object mutterId = mutterMap.get("id");
+                if (mutterId != null) {
+                    Person mutter = personService.getPersonById(Long.valueOf(mutterId.toString()));
+                    existingPerson.setMutter(mutter);
+                }
+            }
+        }
+
+        // Vater-Beziehung aktualisieren (auch Entfernen möglich)
+        if (personData.containsKey("vater")) {
+            Object vaterData = personData.get("vater");
+            if (vaterData == null) {
+                existingPerson.setVater(null);
+            } else if (vaterData instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> vaterMap = (Map<String, Object>) vaterData;
+                Object vaterId = vaterMap.get("id");
+                if (vaterId != null) {
+                    Person vater = personService.getPersonById(Long.valueOf(vaterId.toString()));
+                    existingPerson.setVater(vater);
+                }
+            }
+        }
+
+        // Ehegatte-Beziehung aktualisieren (auch Entfernen möglich)
+        if (personData.containsKey("ehegatte")) {
+            Object ehegatteData = personData.get("ehegatte");
+            if (ehegatteData == null) {
+                // Entferne bidirektionale Beziehung
+                if (existingPerson.getEhegatte() != null) {
+                    Person alterEhegatte = existingPerson.getEhegatte();
+                    alterEhegatte.setEhegatte(null);
+                    personService.savePerson(alterEhegatte);
+                }
+                existingPerson.setEhegatte(null);
+            } else if (ehegatteData instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> ehegatteMap = (Map<String, Object>) ehegatteData;
+                Object ehegatteId = ehegatteMap.get("id");
+                if (ehegatteId != null) {
+                    // Entferne alte Beziehung
+                    if (existingPerson.getEhegatte() != null) {
+                        Person alterEhegatte = existingPerson.getEhegatte();
+                        alterEhegatte.setEhegatte(null);
+                        personService.savePerson(alterEhegatte);
+                    }
+                    // Setze neue Beziehung bidirektional
+                    Person neuerEhegatte = personService.getPersonById(Long.valueOf(ehegatteId.toString()));
+                    existingPerson.setEhegatte(neuerEhegatte);
+                    neuerEhegatte.setEhegatte(existingPerson);
+                    personService.savePerson(neuerEhegatte);
+                }
+            }
         }
 
         Person updatedPerson = personService.savePerson(existingPerson);

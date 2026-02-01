@@ -470,30 +470,50 @@
                 });
         }
 
-        function loadParentOptions() {
+        function loadParentOptions(excludeId = null) {
             fetch("/api/persons")
                 .then(response => response.json())
                 .then(persons => {
                     const mutterSelect = document.getElementById("mutterId");
                     const vaterSelect = document.getElementById("vaterId");
-                    const ehegateSelect = document.getElementById("ehegatte");
+                    const ehegatteSelect = document.getElementById("ehegatte");
+
+                    // Speichere aktuelle Auswahl
+                    const currentMutter = mutterSelect.value;
+                    const currentVater = vaterSelect.value;
+                    const currentEhegatte = ehegatteSelect.value;
+
+                    // Leere die Selects und behalte nur die erste Option
+                    mutterSelect.innerHTML = '<option value="">-- Keine --</option>';
+                    vaterSelect.innerHTML = '<option value="">-- Kein --</option>';
+                    ehegatteSelect.innerHTML = '<option value="">-- Keine/r --</option>';
 
                     persons.forEach(person => {
+                        // Überspringe die aktuell bearbeitete Person
+                        if (excludeId && person.id == excludeId) return;
+                        
+                        const displayName = person.fullName || (person.vorname + " " + person.nachname);
+                        
                         const option1 = document.createElement("option");
                         option1.value = person.id;
-                        option1.textContent = person.fullName || (person.vorname + " " + person.nachname);
+                        option1.textContent = displayName;
                         mutterSelect.appendChild(option1);
 
                         const option2 = document.createElement("option");
                         option2.value = person.id;
-                        option2.textContent = person.fullName || (person.vorname + " " + person.nachname);
+                        option2.textContent = displayName;
                         vaterSelect.appendChild(option2);
 
                         const option3 = document.createElement("option");
                         option3.value = person.id;
-                        option3.textContent = person.fullName || (person.vorname + " " + person.nachname);
-                        ehegateSelect.appendChild(option3);
+                        option3.textContent = displayName;
+                        ehegatteSelect.appendChild(option3);
                     });
+
+                    // Stelle vorherige Auswahl wieder her
+                    if (currentMutter) mutterSelect.value = currentMutter;
+                    if (currentVater) vaterSelect.value = currentVater;
+                    if (currentEhegatte) ehegatteSelect.value = currentEhegatte;
                 })
                 .catch(error => {
                     console.error("Fehler beim Laden der Optionen:", error);
@@ -540,16 +560,37 @@
         }
 
         function editPerson(personId) {
-            fetch(`/api/persons/${personId}`)
+            // Lade zuerst die Dropdown-Optionen ohne die bearbeitete Person
+            loadParentOptions(personId);
+            
+            // Lade Person mit Hierarchie-Daten
+            fetch(`/api/persons/${personId}/hierarchy`)
                 .then(response => response.json())
-                .then(person => {
+                .then(data => {
+                    const person = data.person;
                     currentEditingId = personId;
+                    
                     document.getElementById("personId").value = person.id;
                     document.getElementById("vorname").value = person.vorname;
                     document.getElementById("nachname").value = person.nachname;
                     document.getElementById("geburtsdatum").value = person.geburtsdatum || "";
                     document.getElementById("todesdatum").value = person.todesdatum || "";
-                    document.getElementById("ehegatte").value = person.ehegatte ? person.ehegatte.id : "";
+                    
+                    // Setze Eltern und Ehegatte aus Hierarchie-Daten (nach kurzer Verzögerung)
+                    setTimeout(() => {
+                        document.getElementById("mutterId").value = data.mutter ? data.mutter.id : "";
+                        document.getElementById("vaterId").value = data.vater ? data.vater.id : "";
+                        document.getElementById("ehegatte").value = data.ehegatte ? data.ehegatte.id : "";
+                    }, 100);
+                    
+                    // Bildvorschau setzen falls vorhanden
+                    if (person.bildpfad) {
+                        document.getElementById("imagePreview").src = person.bildpfad;
+                        document.getElementById("imagePreview").classList.add("show");
+                    } else {
+                        document.getElementById("imagePreview").classList.remove("show");
+                    }
+                    
                     document.getElementById("submitBtn").textContent = "Aktualisieren";
 
                     // Scroll zum Formular
@@ -659,6 +700,9 @@
             document.getElementById("ehegatte").value = "";
             document.getElementById("submitBtn").textContent = "Speichern";
             currentEditingId = null;
+            
+            // Lade Dropdowns neu ohne Exclude
+            loadParentOptions();
         }
 
         function formatDate(dateString) {

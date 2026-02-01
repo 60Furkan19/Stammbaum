@@ -132,14 +132,15 @@
 
         .link {
             fill: none;
-            stroke: #999;
-            stroke-width: 2;
-            opacity: 0.6;
+            stroke: #667eea;
+            stroke-width: 3;
+            opacity: 0.7;
+            transition: all 0.3s;
         }
 
         .link:hover {
-            stroke: #667eea;
-            stroke-width: 3;
+            stroke: #764ba2;
+            stroke-width: 4;
             opacity: 1;
         }
 
@@ -192,7 +193,7 @@
         .legend-color {
             width: 20px;
             height: 3px;
-            background: #999;
+            background: #667eea;
         }
 
         .legend-color.living {
@@ -246,13 +247,19 @@
     </div>
 
     <script>
-        let svg, g, tree, root, currentScale = 1;
+        let svg, g, currentScale = 1;
         const margin = { top: 40, right: 40, bottom: 40, left: 40 };
         const width = window.innerWidth - margin.left - margin.right;
         const height = window.innerHeight - margin.top - margin.bottom - 60;
 
+        // Größere Abstände zwischen Nodes
+        const nodeWidth = 180;
+        const nodeHeight = 200;
+        const levelHeight = 250;
+
         // D3 Zoom Verhalten
         const zoom = d3.zoom()
+            .scaleExtent([0.1, 3])
             .on("zoom", (event) => {
                 g.attr("transform", event.transform);
                 currentScale = event.transform.k;
@@ -267,9 +274,6 @@
 
             g = svg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            // Tree Layout
-            tree = d3.tree().size([width * 2, height]);
 
             loadTreeData();
         }
@@ -294,68 +298,65 @@
         function drawTrees(trees) {
             g.selectAll("*").remove();
 
-            let yOffset = 0;
+            // Container für Linien und Nodes
+            const linksGroup = g.append("g").attr("class", "links-container");
+            const nodesGroup = g.append("g").attr("class", "nodes-container");
+
+            let xOffset = 0;
+            const allNodes = [];
+            const allLinks = [];
+
             trees.forEach((treeData, index) => {
-                drawTree(treeData, yOffset);
-                yOffset += 400;
+                const rootNode = d3.hierarchy(treeData);
+                
+                // Berechne die Anzahl der Blätter für die Breite
+                const leafCount = rootNode.leaves().length;
+                const treeWidth = Math.max(leafCount * nodeWidth, nodeWidth * 2);
+                
+                // Tree Layout mit angepassten Abständen
+                const treeLayout = d3.tree()
+                    .nodeSize([nodeWidth, levelHeight])
+                    .separation((a, b) => a.parent === b.parent ? 1.2 : 1.5);
+
+                treeLayout(rootNode);
+
+                // Verschiebe alle Nodes um xOffset
+                rootNode.descendants().forEach(d => {
+                    d.x += xOffset + treeWidth / 2;
+                });
+
+                allNodes.push(...rootNode.descendants());
+                allLinks.push(...rootNode.links());
+
+                xOffset += treeWidth + 100; // Abstand zwischen Bäumen
             });
 
-            // Zoom zu Anfang anpassen
-            setTimeout(() => {
-                const bounds = g.node().getBBox();
-                const fullWidth = bounds.width;
-                const fullHeight = bounds.height;
-                const midX = bounds.x + fullWidth / 2;
-                const midY = bounds.y + fullHeight / 2;
-
-                const scale = Math.min(
-                    (width) / fullWidth,
-                    (height) / fullHeight
-                ) * 0.8;
-
-                const translate = [
-                    width / 2 - midX * scale,
-                    height / 2 - midY * scale
-                ];
-
-                svg.transition()
-                    .duration(750)
-                    .call(
-                        zoom.transform,
-                        d3.zoomIdentity
-                            .translate(translate[0] + margin.left, translate[1] + margin.top)
-                            .scale(scale)
-                    );
-            }, 100);
-        }
-
-        function drawTree(treeData, yOffset) {
-            const rootNode = d3.hierarchy(treeData);
-
-            // Erhöhe die Breite und Höhe für bessere Abstände
-            const treeWidth = width * 3;
-            const treeHeight = height * 2;
-
-            tree.size([treeWidth, treeHeight - yOffset]);
-            tree(rootNode);
-
-            // Links zeichnen
-            g.selectAll(".link-group")
-                .data([rootNode])
-                .join("g")
-                .attr("class", "link-group")
-                .selectAll(".link")
-                .data(rootNode.links())
-                .join("line")
+            // Zeichne alle Links (Verbindungslinien)
+            linksGroup.selectAll(".link")
+                .data(allLinks)
+                .join("path")
                 .attr("class", "link")
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
+                .attr("d", d => {
+                    // Geschwungene Linie von Eltern zu Kind
+                    const sourceX = d.source.x;
+                    const sourceY = d.source.y + 90; // Unterhalb der Eltern-Karte
+                    const targetX = d.target.x;
+                    const targetY = d.target.y - 90; // Oberhalb der Kind-Karte
+                    const midY = (sourceY + targetY) / 2;
+                    
+                    return `M ${sourceX},${sourceY} 
+                            C ${sourceX},${midY} 
+                              ${targetX},${midY} 
+                              ${targetX},${targetY}`;
+                })
+                .attr("fill", "none")
+                .attr("stroke", "#667eea")
+                .attr("stroke-width", 3)
+                .attr("opacity", 0.7);
 
-            // Nodes zeichnen
-            const nodes = g.selectAll(".node")
-                .data(rootNode.descendants())
+            // Zeichne alle Nodes
+            const nodes = nodesGroup.selectAll(".node")
+                .data(allNodes, d => d.data.id)
                 .join("g")
                 .attr("class", "node")
                 .attr("transform", d => `translate(${d.x},${d.y})`);
@@ -371,9 +372,9 @@
                     let datesHtml = "";
                     if (d.data.geburtsdatum) {
                         datesHtml += `<div class="node-dates">`;
-                        datesHtml += `*${formatDate(d.data.geburtsdatum)}`;
+                        datesHtml += `* ${formatDate(d.data.geburtsdatum)}`;
                         if (d.data.todesdatum) {
-                            datesHtml += `<br/><span class="deceased">†${formatDate(d.data.todesdatum)}</span>`;
+                            datesHtml += `<br/><span class="deceased">† ${formatDate(d.data.todesdatum)}</span>`;
                         } else {
                             datesHtml += `<span class="alive"> (lebend)</span>`;
                         }
@@ -390,6 +391,40 @@
                     event.stopPropagation();
                     showPersonDetails(d.data.id);
                 });
+
+            // Zoom zu Anfang anpassen
+            setTimeout(() => {
+                fitTreeInView();
+            }, 100);
+        }
+
+        function fitTreeInView() {
+            const bounds = g.node().getBBox();
+            if (bounds.width === 0 || bounds.height === 0) return;
+
+            const fullWidth = bounds.width;
+            const fullHeight = bounds.height;
+            const midX = bounds.x + fullWidth / 2;
+            const midY = bounds.y + fullHeight / 2;
+
+            const scale = Math.min(
+                width / (fullWidth + 100),
+                height / (fullHeight + 100)
+            ) * 0.85;
+
+            const translate = [
+                width / 2 - midX * scale,
+                height / 2 - midY * scale
+            ];
+
+            svg.transition()
+                .duration(750)
+                .call(
+                    zoom.transform,
+                    d3.zoomIdentity
+                        .translate(translate[0] + margin.left, translate[1] + margin.top)
+                        .scale(scale)
+                );
         }
 
         function formatDate(dateString) {
@@ -399,8 +434,8 @@
         }
 
         function showPersonDetails(personId) {
-            // Hier könnte man ein Modal anzeigen
-            console.log("Zeige Details für Person:", personId);
+            // Navigiere zur Bearbeitungsseite
+            window.location.href = `/edit?id=${personId}`;
         }
 
         function showEmptyState() {
@@ -411,6 +446,16 @@
                 .attr("font-size", "20px")
                 .attr("fill", "#999")
                 .text("Keine Personen im Stammbaum. Bitte fügen Sie eine Person hinzu.");
+            
+            g.append("text")
+                .attr("x", width / 2)
+                .attr("y", height / 2 + 40)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "16px")
+                .attr("fill", "#667eea")
+                .attr("cursor", "pointer")
+                .text("➕ Person hinzufügen")
+                .on("click", () => window.location.href = "/edit");
         }
 
         function showErrorState() {
@@ -424,9 +469,7 @@
         }
 
         function resetZoom() {
-            svg.transition()
-                .duration(750)
-                .call(zoom.transform, d3.zoomIdentity.translate(margin.left, margin.top));
+            fitTreeInView();
         }
 
         function zoomIn() {
