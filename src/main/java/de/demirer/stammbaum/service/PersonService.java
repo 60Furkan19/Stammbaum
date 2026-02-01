@@ -109,7 +109,8 @@ public class PersonService {
         Set<Long> processedIds = new HashSet<>();
         List<Map<String, Object>> trees = new ArrayList<>();
 
-        // Finde alle Wurzeln (Personen ohne Mutter und Vater)
+        // Finde alle echten Wurzeln (Personen ohne Mutter und Vater)
+        // Ehegatten-Beziehungen zählen NICHT als Grund für eine separate Wurzel
         List<Person> roots = allPersons.stream()
                 .filter(p -> p.getMutter() == null && p.getVater() == null)
                 .toList();
@@ -121,6 +122,10 @@ public class PersonService {
 
         for (Person root : roots) {
             if (!processedIds.contains(root.getId())) {
+                // Überspringe Ehegatten von bereits verarbeiteten Personen
+                if (root.getEhegatte() != null && processedIds.contains(root.getEhegatte().getId())) {
+                    continue;
+                }
                 trees.add(buildTreeNode(root, processedIds));
             }
         }
@@ -144,11 +149,19 @@ public class PersonService {
         node.put("todesdatum", person.getTodesdatum());
         node.put("bildpfad", person.getBildpfad() != null ? person.getBildpfad() : "/placeholder.png");
 
-        List<Map<String, Object>> kinder = new ArrayList<>();
+        // Füge Ehegatte-Information hinzu (für Linien-Zeichnung)
+        if (person.getEhegatte() != null) {
+            Map<String, Object> ehegatteData = new HashMap<>();
+            ehegatteData.put("id", person.getEhegatte().getId());
+            ehegatteData.put("fullName", person.getEhegatte().getFullName());
+            node.put("ehegatte", ehegatteData);
+        }
 
-        // Sammle alle eindeutigen Kinder
+        // Sammle alle eindeutigen Kinder für children array
+        List<Map<String, Object>> kinder = new ArrayList<>();
         Set<Long> kinderIds = new HashSet<>();
 
+        // Kinder von dieser Person als Mutter
         if (person.getKinderAlsMutter() != null) {
             for (Person kind : person.getKinderAlsMutter()) {
                 if (!kinderIds.contains(kind.getId())) {
@@ -161,6 +174,7 @@ public class PersonService {
             }
         }
 
+        // Kinder von dieser Person als Vater
         if (person.getKinderAlsVater() != null) {
             for (Person kind : person.getKinderAlsVater()) {
                 if (!kinderIds.contains(kind.getId())) {
@@ -173,6 +187,7 @@ public class PersonService {
             }
         }
 
+        // Füge children nur hinzu wenn es welche gibt
         if (!kinder.isEmpty()) {
             node.put("children", kinder);
         }
