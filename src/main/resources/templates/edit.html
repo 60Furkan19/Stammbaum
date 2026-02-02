@@ -461,18 +461,29 @@
 
         function loadPersonList() {
             fetch("/api/persons")
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(persons => {
                     displayPersonList(persons);
                 })
                 .catch(error => {
-                    showError("Fehler beim Laden der Personenliste: " + error);
+                    console.error("Fehler beim Laden der Personenliste:", error);
+                    showError("Fehler beim Laden der Personenliste: " + error.message);
                 });
         }
 
         function loadParentOptions(excludeId = null) {
             fetch("/api/persons")
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(persons => {
                     const mutterSelect = document.getElementById("mutterId");
                     const vaterSelect = document.getElementById("vaterId");
@@ -517,6 +528,7 @@
                 })
                 .catch(error => {
                     console.error("Fehler beim Laden der Optionen:", error);
+                    showError("Fehler beim Laden der Personen-Optionen");
                 });
         }
 
@@ -537,7 +549,7 @@
                         <div class="person-name">${person.vorname} ${person.nachname}</div>
                         <div class="person-meta">
                             ${person.geburtsdatum ? '* ' + formatDate(person.geburtsdatum) : ''}
-                            ${person.todesdatum ? ' † ' + formatDate(person.todesdatum) : ''}
+                            ${person.todesdatum ? ' 🕊️ ' + formatDate(person.todesdatum) : ''}
                         </div>
                     </div>
                     <div class="person-actions">
@@ -634,7 +646,16 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(personData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(savedPerson => {
                 // Bild hochladen falls vorhanden
                 if (bildFile) {
@@ -647,7 +668,8 @@
                 }
             })
             .catch(error => {
-                showError("Fehler beim Speichern: " + error);
+                console.error("Speichern Fehler:", error);
+                showError("Fehler beim Speichern: " + error.message);
             });
         }
 
@@ -659,7 +681,14 @@
                 method: "POST",
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 showSuccess(currentEditingId ? "Person aktualisiert!" : "Person hinzugefügt!");
                 resetForm();
@@ -667,7 +696,8 @@
                 loadParentOptions();
             })
             .catch(error => {
-                showError("Fehler beim Bildupload: " + error);
+                console.error("Bildupload Fehler:", error);
+                showError("Fehler beim Bildupload: " + error.message);
             });
         }
 
@@ -676,13 +706,18 @@
                 fetch(`/api/persons/${personId}`, {
                     method: "DELETE"
                 })
-                .then(() => {
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     showSuccess("Person gelöscht!");
                     loadPersonList();
                     loadParentOptions();
+                    resetForm();
                 })
                 .catch(error => {
-                    showError("Fehler beim Löschen: " + error);
+                    console.error("Fehler beim Löschen:", error);
+                    showError("Fehler beim Löschen: " + error.message);
                 });
             }
         }

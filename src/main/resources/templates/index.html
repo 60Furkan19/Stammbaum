@@ -180,11 +180,12 @@
             stroke: #E91E63;
             stroke-width: 3;
             fill: none;
+            stroke-dasharray: none;
         }
 
         .child-line {
-            stroke: #667eea;
-            stroke-width: 2;
+            stroke: #4CAF50;
+            stroke-width: 2.5;
             fill: none;
         }
 
@@ -253,7 +254,7 @@
         }
 
         .legend-line.child {
-            background: #667eea;
+            background: #4CAF50;
         }
 
         .empty-state {
@@ -552,14 +553,18 @@
                 if (!person || allPersonsById.has(person.id)) return;
                 allPersonsById.set(person.id, person);
                 
+                // Indexiere Ehegatte auch (für Linien-Zeichnung)
                 if (person.ehegatte) {
                     allPersonsById.set(person.ehegatte.id, person.ehegatte);
                 }
+
+                // Indexiere Kinder rekursiv
                 if (person.children) {
                     person.children.forEach(indexPerson);
                 }
             }
             
+            // Indexiere alle Personen in den Bäumen
             trees.forEach(indexPerson);
         }
 
@@ -577,42 +582,69 @@
         function layoutTree(trees) {
             nodePositions.clear();
             let currentX = 0;
-            
+
             trees.forEach((tree, index) => {
-                const treeWidth = layoutSubtree(tree, currentX, 0, 0);
-                currentX += treeWidth + CONFIG.TREE_GAP;
+                const treeWidth = calculateSubtreeWidth(tree);
+
+                // Layout für diesen Baum
+                layoutSubtree(tree, currentX + 50, 50, 0);
+
+                // Nächster Baum rechts davon
+                currentX += treeWidth + CONFIG.TREE_GAP + 100;
             });
         }
 
-        function layoutSubtree(person, startX, level, parentCenterX) {
+        function calculateSubtreeHeight(person, currentLevel = 0) {
+            if (!person) return 0;
+
+            if (!person.children || person.children.length === 0) {
+                return CONFIG.CARD_HEIGHT + (currentLevel * CONFIG.GENERATION_GAP);
+            }
+
+            let maxHeight = 0;
+            person.children.forEach(child => {
+                const childHeight = calculateSubtreeHeight(child, currentLevel + 1);
+                maxHeight = Math.max(maxHeight, childHeight);
+            });
+
+            return CONFIG.CARD_HEIGHT + CONFIG.GENERATION_GAP + maxHeight;
+        }
+
+        function layoutSubtree(person, startX, startY, level) {
             if (!person || nodePositions.has(person.id)) return 0;
             
-            const y = level * CONFIG.GENERATION_GAP;
+            const y = startY + (level * CONFIG.GENERATION_GAP);
             const hasSpouse = person.ehegatte && !nodePositions.has(person.ehegatte.id);
             
             // Berechne Breite für Kinder
             let childrenWidth = 0;
             const childWidths = [];
-            
+
             if (person.children && person.children.length > 0) {
                 person.children.forEach(child => {
                     const childWidth = calculateSubtreeWidth(child);
                     childWidths.push(childWidth);
                     childrenWidth += childWidth;
                 });
-                childrenWidth += (person.children.length - 1) * CONFIG.SIBLING_GAP;
+                if (person.children.length > 1) {
+                    childrenWidth += (person.children.length - 1) * CONFIG.SIBLING_GAP;
+                }
             }
-            
+
             // Breite dieser Familie (Paar oder einzeln)
             const coupleWidth = hasSpouse 
                 ? CONFIG.CARD_WIDTH * 2 + CONFIG.COUPLE_GAP 
                 : CONFIG.CARD_WIDTH;
             
+            // Nutze die größere Breite: Paar oder Kinder
             const totalWidth = Math.max(coupleWidth, childrenWidth);
-            const centerX = startX + totalWidth / 2;
-            
+
+            // Zentriere das Paar in dieser Breite
+            const coupleStartX = startX + (totalWidth - coupleWidth) / 2;
+            const centerX = coupleStartX + coupleWidth / 2;
+
             // Positioniere Hauptperson
-            const personX = hasSpouse 
+            const personX = hasSpouse
                 ? centerX - CONFIG.CARD_WIDTH - CONFIG.COUPLE_GAP / 2
                 : centerX - CONFIG.CARD_WIDTH / 2;
             
@@ -622,7 +654,9 @@
                 width: CONFIG.CARD_WIDTH,
                 height: CONFIG.CARD_HEIGHT,
                 hasSpouse: hasSpouse,
-                spouseId: hasSpouse ? person.ehegatte.id : null
+                spouseId: hasSpouse ? person.ehegatte.id : null,
+                centerX: centerX,
+                level: level
             });
             
             // Positioniere Ehepartner
@@ -634,16 +668,18 @@
                     width: CONFIG.CARD_WIDTH,
                     height: CONFIG.CARD_HEIGHT,
                     hasSpouse: true,
-                    spouseId: person.id
+                    spouseId: person.id,
+                    centerX: centerX,
+                    level: level
                 });
             }
             
-            // Positioniere Kinder
+            // Positioniere Kinder - jedes Kind zentriert über seinen eigenen Kindern
             if (person.children && person.children.length > 0) {
-                let childX = centerX - childrenWidth / 2;
-                
+                let childX = startX + (totalWidth - childrenWidth) / 2;
+
                 person.children.forEach((child, index) => {
-                    layoutSubtree(child, childX, level + 1, centerX);
+                    layoutSubtree(child, childX, startY, level + 1);
                     childX += childWidths[index] + CONFIG.SIBLING_GAP;
                 });
             }
@@ -702,7 +738,7 @@
         }
 
         function drawConnections(svg) {
-            // Ehe-Linien zeichnen
+            // Schritt 1: Zeichne alle Ehe-Linien (ZUERST)
             const drawnMarriages = new Set();
             
             nodePositions.forEach((pos, personId) => {
@@ -728,41 +764,35 @@
                 }
             });
             
-            // Eltern-Kind-Linien zeichnen
+            // Schritt 2: Zeichne alle Eltern-Kind-Linien
             if (treeData) {
-                treeData.forEach(tree => drawChildConnections(svg, tree));
+                treeData.forEach(tree => drawChildConnections(svg, tree, null));
             }
         }
 
-        function drawChildConnections(svg, person) {
+        function drawChildConnections(svg, person, parentCenterX) {
             if (!person || !person.children || person.children.length === 0) return;
             
             const parentPos = nodePositions.get(person.id);
             if (!parentPos) return;
             
-            // Berechne Mittelpunkt zwischen Eltern
-            let parentCenterX = parentPos.x + CONFIG.CARD_WIDTH / 2;
+            // Berechne Mittelpunkt dieser Elterngruppe (Person + Ehegatte falls vorhanden)
+            let thisCenterX = parentPos.x + CONFIG.CARD_WIDTH / 2;
             if (parentPos.hasSpouse && parentPos.spouseId) {
                 const spousePos = nodePositions.get(parentPos.spouseId);
                 if (spousePos) {
-                    parentCenterX = (parentPos.x + CONFIG.CARD_WIDTH + spousePos.x) / 2;
+                    thisCenterX = (parentPos.x + CONFIG.CARD_WIDTH + spousePos.x) / 2;
                 }
             }
             
             const parentBottomY = parentPos.y + CONFIG.CARD_HEIGHT;
+            const nextLevelY = parentPos.y + CONFIG.GENERATION_GAP;
             const midY = parentBottomY + (CONFIG.GENERATION_GAP - CONFIG.CARD_HEIGHT) / 2;
             
-            // Vertikale Linie von Eltern runter
-            const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            vLine.setAttribute('x1', parentCenterX);
-            vLine.setAttribute('y1', parentBottomY);
-            vLine.setAttribute('x2', parentCenterX);
-            vLine.setAttribute('y2', midY);
-            vLine.setAttribute('class', 'child-line');
-            svg.appendChild(vLine);
-            
-            // Sammle Kind-Positionen
+            // Sammle alle Kind-Zentren
             const childCenters = [];
+            const childPositions = [];
+
             person.children.forEach(child => {
                 const childPos = nodePositions.get(child.id);
                 if (childPos) {
@@ -773,53 +803,81 @@
                             childCenterX = (childPos.x + CONFIG.CARD_WIDTH + childSpousePos.x) / 2;
                         }
                     }
-                    childCenters.push({ x: childCenterX, y: childPos.y });
+                    childCenters.push(childCenterX);
+                    childPositions.push({ x: childCenterX, y: childPos.y });
                 }
             });
             
-            if (childCenters.length > 0) {
-                // Horizontale Linie über den Kindern
-                const minChildX = Math.min(...childCenters.map(c => c.x));
-                const maxChildX = Math.max(...childCenters.map(c => c.x));
-                
-                // Linie von parentCenter zu Kinder-Bereich
-                if (childCenters.length === 1) {
-                    // Nur ein Kind: direkte Linie
-                    const childX = childCenters[0].x;
-                    if (childX !== parentCenterX) {
-                        const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        hLine.setAttribute('x1', parentCenterX);
-                        hLine.setAttribute('y1', midY);
-                        hLine.setAttribute('x2', childX);
-                        hLine.setAttribute('y2', midY);
-                        hLine.setAttribute('class', 'child-line');
-                        svg.appendChild(hLine);
-                    }
-                } else {
-                    // Mehrere Kinder: T-Form
-                    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    hLine.setAttribute('x1', minChildX);
-                    hLine.setAttribute('y1', midY);
-                    hLine.setAttribute('x2', maxChildX);
-                    hLine.setAttribute('y2', midY);
-                    hLine.setAttribute('class', 'child-line');
-                    svg.appendChild(hLine);
-                }
-                
-                // Vertikale Linien zu jedem Kind
-                childCenters.forEach(childCenter => {
-                    const vChildLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    vChildLine.setAttribute('x1', childCenter.x);
-                    vChildLine.setAttribute('y1', midY);
-                    vChildLine.setAttribute('x2', childCenter.x);
-                    vChildLine.setAttribute('y2', childCenter.y);
-                    vChildLine.setAttribute('class', 'child-line');
-                    svg.appendChild(vChildLine);
+            if (childCenters.length === 0) return;
+
+            // ===== LINIEN-STRUKTUR =====
+            // 1. Vertikale Linie von Eltern nach unten
+            const vLine1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            vLine1.setAttribute('x1', thisCenterX);
+            vLine1.setAttribute('y1', parentBottomY);
+            vLine1.setAttribute('x2', thisCenterX);
+            vLine1.setAttribute('y2', midY);
+            vLine1.setAttribute('class', 'child-line');
+            svg.appendChild(vLine1);
+
+            // 2. Horizontale Linie über den Kindern
+            const minChildX = Math.min(...childCenters);
+            const maxChildX = Math.max(...childCenters);
+
+            if (childCenters.length === 1) {
+                // Einzelnes Kind: Gerade Linie von Eltern zu Kind
+                const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hLine.setAttribute('x1', thisCenterX);
+                hLine.setAttribute('y1', midY);
+                hLine.setAttribute('x2', childCenters[0]);
+                hLine.setAttribute('y2', midY);
+                hLine.setAttribute('class', 'child-line');
+                svg.appendChild(hLine);
+
+                // Vertikale Linie zum Kind
+                const vLine2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                vLine2.setAttribute('x1', childCenters[0]);
+                vLine2.setAttribute('y1', midY);
+                vLine2.setAttribute('x2', childCenters[0]);
+                vLine2.setAttribute('y2', childPositions[0].y);
+                vLine2.setAttribute('class', 'child-line');
+                svg.appendChild(vLine2);
+            } else {
+                // Mehrere Kinder: T-Form Struktur
+                // Horizontale Linie über alle Kinder
+                const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hLine.setAttribute('x1', minChildX);
+                hLine.setAttribute('y1', midY);
+                hLine.setAttribute('x2', maxChildX);
+                hLine.setAttribute('y2', midY);
+                hLine.setAttribute('class', 'child-line');
+                svg.appendChild(hLine);
+
+                // Verbindung von Eltern zur horizontalen Linie
+                const hConnectLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hConnectLine.setAttribute('x1', thisCenterX);
+                hConnectLine.setAttribute('y1', midY);
+                hConnectLine.setAttribute('x2', (minChildX + maxChildX) / 2);
+                hConnectLine.setAttribute('y2', midY);
+                hConnectLine.setAttribute('class', 'child-line');
+                svg.appendChild(hConnectLine);
+
+                // Vertikale Linien von horizontaler Linie zu jedem Kind
+                childPositions.forEach((childPos, index) => {
+                    const vLine2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    vLine2.setAttribute('x1', childPos.x);
+                    vLine2.setAttribute('y1', midY);
+                    vLine2.setAttribute('x2', childPos.x);
+                    vLine2.setAttribute('y2', childPos.y);
+                    vLine2.setAttribute('class', 'child-line');
+                    svg.appendChild(vLine2);
                 });
             }
             
-            // Rekursiv für Kinder
-            person.children.forEach(child => drawChildConnections(svg, child));
+            // 3. Rekursiv für Kinder
+            person.children.forEach(child => {
+                drawChildConnections(svg, child, thisCenterX);
+            });
         }
 
         function createPersonCard(person, pos) {
@@ -832,7 +890,7 @@
             if (person.geburtsdatum) {
                 datesHtml = `<div class="person-dates">* ${formatDate(person.geburtsdatum)}`;
                 if (person.todesdatum) {
-                    datesHtml += `<br><span class="deceased">† ${formatDate(person.todesdatum)}</span>`;
+                    datesHtml += `<br><span class="deceased">🕊️ ${formatDate(person.todesdatum)}</span>`;
                 } else {
                     datesHtml += ` <span class="alive">(lebend)</span>`;
                 }

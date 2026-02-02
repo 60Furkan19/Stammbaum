@@ -54,11 +54,11 @@ public class Person {
     private Person vater;
 
     // Kinder
-    @OneToMany(mappedBy = "mutter", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "mutter", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Person> kinderAlsMutter = new ArrayList<>();
 
-    @OneToMany(mappedBy = "vater", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "vater", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Person> kinderAlsVater = new ArrayList<>();
 

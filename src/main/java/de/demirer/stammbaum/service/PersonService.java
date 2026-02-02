@@ -41,6 +41,36 @@ public class PersonService {
     }
 
     public void deletePerson(Long id) {
+        Person person = getPersonById(id);
+
+        // Entferne Ehegatte-Beziehung
+        if (person.getEhegatte() != null) {
+            Person ehegatte = person.getEhegatte();
+            ehegatte.setEhegatte(null);
+            personRepository.save(ehegatte);
+        }
+
+        // Entferne alle Kinder-Beziehungen
+        // - Wenn diese Person Mutter ist
+        if (person.getKinderAlsMutter() != null && !person.getKinderAlsMutter().isEmpty()) {
+            for (Person kind : person.getKinderAlsMutter()) {
+                kind.setMutter(null);
+                personRepository.save(kind);
+            }
+        }
+
+        // - Wenn diese Person Vater ist
+        if (person.getKinderAlsVater() != null && !person.getKinderAlsVater().isEmpty()) {
+            for (Person kind : person.getKinderAlsVater()) {
+                kind.setVater(null);
+                personRepository.save(kind);
+            }
+        }
+
+        // Entferne Eltern-Beziehung (setze Mutter und Vater auf null)
+        // Dies wird automatisch durch die Person-Entity gemacht
+
+        // Lösche die Person
         personRepository.deleteById(id);
     }
 
@@ -110,7 +140,6 @@ public class PersonService {
         List<Map<String, Object>> trees = new ArrayList<>();
 
         // Finde alle echten Wurzeln (Personen ohne Mutter und Vater)
-        // Ehegatten-Beziehungen zählen NICHT als Grund für eine separate Wurzel
         List<Person> roots = allPersons.stream()
                 .filter(p -> p.getMutter() == null && p.getVater() == null)
                 .toList();
@@ -123,10 +152,16 @@ public class PersonService {
         for (Person root : roots) {
             if (!processedIds.contains(root.getId())) {
                 // Überspringe Ehegatten von bereits verarbeiteten Personen
+                // Das ist wichtig: Ehegatten sind KEINE separaten Wurzeln!
                 if (root.getEhegatte() != null && processedIds.contains(root.getEhegatte().getId())) {
                     continue;
                 }
                 trees.add(buildTreeNode(root, processedIds));
+
+                // Markiere auch den Ehegatte als verarbeitet, damit er nicht separat hinzugefügt wird
+                if (root.getEhegatte() != null) {
+                    processedIds.add(root.getEhegatte().getId());
+                }
             }
         }
 
@@ -149,11 +184,17 @@ public class PersonService {
         node.put("todesdatum", person.getTodesdatum());
         node.put("bildpfad", person.getBildpfad() != null ? person.getBildpfad() : "/placeholder.png");
 
-        // Füge Ehegatte-Information hinzu (für Linien-Zeichnung)
+        // Füge Ehegatte-Information hinzu (mit allen Daten)
         if (person.getEhegatte() != null) {
+            Person ehegatte = person.getEhegatte();
             Map<String, Object> ehegatteData = new HashMap<>();
-            ehegatteData.put("id", person.getEhegatte().getId());
-            ehegatteData.put("fullName", person.getEhegatte().getFullName());
+            ehegatteData.put("id", ehegatte.getId());
+            ehegatteData.put("vorname", ehegatte.getVorname());
+            ehegatteData.put("nachname", ehegatte.getNachname());
+            ehegatteData.put("fullName", ehegatte.getFullName());
+            ehegatteData.put("geburtsdatum", ehegatte.getGeburtsdatum());
+            ehegatteData.put("todesdatum", ehegatte.getTodesdatum());
+            ehegatteData.put("bildpfad", ehegatte.getBildpfad() != null ? ehegatte.getBildpfad() : "/placeholder.png");
             node.put("ehegatte", ehegatteData);
         }
 
